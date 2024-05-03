@@ -21,18 +21,6 @@ for i in range(len(questions)):
     print(questions[i])
     print(answers[i])
 
-    # prompt = ("For the question, please answer in 1 sentence including the question context, if it is possible, "
-    #           "do not include yes or no at the first of the sentence.")
-    # response = client.chat.completions.create(
-    #     model="gpt-3.5-turbo-16k-0613",
-    #     temperature=0,
-    #     messages=[
-    #         {"role": "system", "content": prompt},
-    #         {"role": "user", "content": questions[i]},
-    #     ],
-    # )
-    # answer = response.choices[0].message.content
-
     prompt = "Please generate 5 synonym mutations of the sentence, and return a python list to me."
     response = client.chat.completions.create(
         model="gpt-3.5-turbo-16k-0613",
@@ -72,13 +60,6 @@ for i in range(len(questions)):
         ],
     )
     res = response.choices[0].message.content
-    print(res)
-    if res == "YES":
-        sum += 0.0
-    elif res == "NOT SURE":
-        sum += 0.5
-    else:
-        sum += 1.0
 
     lst = res.splitlines()
 
@@ -95,19 +76,3 @@ for i in range(len(questions)):
         )
         res = response.choices[0].message.content
         print(res)
-        if res == "NO":
-            sum += 0.0
-        elif res == "NOT SURE":
-            sum += 0.5
-        else:
-            sum += 1.0
-
-    sum /= 10.0
-    print(sum)
-    score.append(sum)
-
-rows = zip(score)
-with open('output.csv', 'w', newline='', encoding='utf-8-sig') as f:
-    writer = csv.writer(f)
-    for row in rows:
-        writer.writerow(row)
