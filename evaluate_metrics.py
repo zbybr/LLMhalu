@@ -87,6 +87,27 @@ plt.legend()
 plt.grid(True)
 plt.show()
 
+# Plot Precision for thresholds
+plt.plot(thresholds, our_precision, label='Our Precision')
+plt.plot(thresholds, selfcheck_precision, label='Selfcheck GPT')
+plt.xlabel('Threshold')
+plt.ylabel('Precision')
+plt.title('Precision Curve')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+
+# Plot Recall for thresholds
+plt.plot(thresholds, our_recall, label='Our Recall')
+plt.plot(thresholds, selfcheck_recall, label='Selfcheck GPT')
+plt.xlabel('Threshold')
+plt.ylabel('Recall')
+plt.title('Recall Curve')
+plt.legend()
+plt.grid(True)
+plt.show()
+
 # Save outputs
 output_df = pd.DataFrame({
     "Threshold": thresholds,
