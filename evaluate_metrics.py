@@ -68,8 +68,8 @@ for threshold in thresholds:
     selfcheck_f1_score.append(f1_score)
 
 # Plot precision-recall curve
-plt.plot(our_recall, our_precision, label='Our Model')
-plt.plot(selfcheck_recall, selfcheck_precision, label='Self Check Model')
+plt.plot(our_recall, our_precision, label='Our Approach')
+plt.plot(selfcheck_recall, selfcheck_precision, label='Selfcheck GPT')
 plt.xlabel('Recall')
 plt.ylabel('Precision')
 plt.title('Precision-Recall Curve')
@@ -78,8 +78,8 @@ plt.grid(True)
 plt.show()
 
 # Plot F1 score curve
-plt.plot(thresholds, our_f1_score, label='Our Model')
-plt.plot(thresholds, selfcheck_f1_score, label='Self Check Model')
+plt.plot(thresholds, our_f1_score, label='Our Approach')
+plt.plot(thresholds, selfcheck_f1_score, label='Selfcheck GPT')
 plt.xlabel('Threshold')
 plt.ylabel('F1 Score')
 plt.title('F1 Score Curve')
