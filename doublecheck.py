@@ -1,7 +1,7 @@
 from openai import OpenAI
 import pandas as pd
 
-dataset_path = "temp.csv"
+dataset_path = "comparison.csv"
 df = pd.read_csv(dataset_path, encoding='latin-1')
 
 total = 0
@@ -16,32 +16,34 @@ lower_s = 0
 check = 0
 check_s = 0
 
+threshold = 0.5
+
 for _, row in df.iterrows():
     score = float(row["scores"])
-    halu = row["Hallucination check"]
+    halu = row["Hallucination check(Manually)"]
     score_s = float(row["Selfcheck Scores"][1:-1])
     if 'Yes' in halu:
         total += 1
-        if score_s >= 0.5:
+        if score_s >= threshold:
             true_s += 1
-        if score >= 0.5:
+        if score >= threshold:
             true += 1
         if score_s <= score:
             higher += 1
         else:
             higher_s += 1
     else:
-        if score_s > 0.5:
+        if score_s > threshold:
             false_s += 1
-        if score > 0.5:
+        if score > threshold:
             false += 1
         if score_s >= score:
             lower += 1
         else:
             lower_s += 1
-    if score >= 0.5:
+    if score >= threshold:
         check += 1
-    if score_s >= 0.5:
+    if score_s >= threshold:
         check_s += 1
 
 
