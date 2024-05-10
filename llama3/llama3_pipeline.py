@@ -5,6 +5,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 INPUT_DATA = "/home/mdafifal.mamun/research/LLMhalu/TruthfulQA_100-samples_42-seed.csv"
 OUTPUT_DATA = "/home/mdafifal.mamun/research/LLMhalu/llama3_outputs.csv"
+model_id = "meta-llama/Meta-Llama-3-8B-Instruct"
 
 print("Preparing Llama3 pipeline...")
 tokenizer = AutoTokenizer.from_pretrained(model_id)
@@ -50,7 +51,7 @@ def get_llm_response(question):
     return tokenizer.decode(response, skip_special_tokens=True)
 
 
-df = pd.read_csv(INPUT_DATA)
+df = pd.read_csv(INPUT_DATA)[:5]
 
 print("Generating Responses...")
 
@@ -58,7 +59,10 @@ responses = []
 
 for _, row in tqdm(df.iterrows(), total=len(df), desc="Processing issue"):
     question = row["Question"]
+    print(f"Question: {question}")
     response = get_llm_response(question=question)
+    print(f"Response: {response}")
+    print("===================================\n")
     response = response.replace("\n\n", "\n")
     responses.append(response)
 
