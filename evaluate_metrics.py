@@ -1,7 +1,10 @@
-import pandas as pd
-import matplotlib.pyplot as plt
+import os
 
-dataset_path = "comparison.csv"
+import matplotlib.pyplot as plt
+import pandas as pd
+
+dataset_path = "/home/mdafifal.mamun/research/LLMhalu/llama3/data/llama3_outputs_check_2.csv"
+eval_dir = "/home/mdafifal.mamun/research/LLMhalu/llama3/evaluation"
 df = pd.read_csv(dataset_path, encoding='latin-1')
 
 
@@ -44,9 +47,9 @@ for threshold in thresholds:
     our_scores = []
     selfcheck_scores = []
     for _, row in df.iterrows():
-        score = float(row["scores"])
+        score = float(row["score"])
         halu = row["Hallucination check(Manually)"]
-        score_s = float(row["Selfcheck Scores"][1:-1])
+        score_s = float(row["Selfcheck Scores"])
 
         row_score = get_score(score, threshold, halu)
         selfcheck_score = get_score(score_s, threshold, halu)
@@ -67,6 +70,9 @@ for threshold in thresholds:
     selfcheck_recall.append(recall)
     selfcheck_f1_score.append(f1_score)
 
+# Ensure the plot directory exists
+os.makedirs(eval_dir, exist_ok=True)
+
 # Plot precision-recall curve
 plt.plot(our_recall, our_precision, label='Our Approach')
 plt.plot(selfcheck_recall, selfcheck_precision, label='Selfcheck GPT')
@@ -75,7 +81,8 @@ plt.ylabel('Precision')
 plt.title('Precision-Recall Curve')
 plt.legend()
 plt.grid(True)
-plt.show()
+plt.savefig(os.path.join(eval_dir, 'precision_recall_curve.png'))
+plt.close()
 
 # Plot F1 score curve
 plt.plot(thresholds, our_f1_score, label='Our Approach')
@@ -85,7 +92,8 @@ plt.ylabel('F1 Score')
 plt.title('F1 Score Curve')
 plt.legend()
 plt.grid(True)
-plt.show()
+plt.savefig(os.path.join(eval_dir, 'f1_score_curve.png'))
+plt.close()
 
 # Plot Precision for thresholds
 plt.plot(thresholds, our_precision, label='Our Precision')
@@ -95,8 +103,8 @@ plt.ylabel('Precision')
 plt.title('Precision Curve')
 plt.legend()
 plt.grid(True)
-plt.show()
-
+plt.savefig(os.path.join(eval_dir, 'precision_curve.png'))
+plt.close()
 
 # Plot Recall for thresholds
 plt.plot(thresholds, our_recall, label='Our Recall')
@@ -106,7 +114,8 @@ plt.ylabel('Recall')
 plt.title('Recall Curve')
 plt.legend()
 plt.grid(True)
-plt.show()
+plt.savefig(os.path.join(eval_dir, 'recall_curve.png'))
+plt.close()
 
 # Save outputs
 output_df = pd.DataFrame({
@@ -119,4 +128,4 @@ output_df = pd.DataFrame({
     "Selfcheck F1": selfcheck_f1_score
 })
 
-output_df.to_csv("metrics_comparison.csv", index=False)
+output_df.to_csv(os.path.join(eval_dir, "llama3_comparison.csv"), index=False)
