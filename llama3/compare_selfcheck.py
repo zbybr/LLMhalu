@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import spacy
 import torch
@@ -77,6 +78,7 @@ if __name__ == "__main__":
 
         sentences = [sent.text.strip() for sent in nlp(answer).sents]
         print(f"Question: {question}")
+        print(f"Answer: {answer}")
 
         system_prompt = ("For the question, please answer in 1 sentence including the question context, if possible. "
                             "Do not include yes or no at the beginning of the sentence.")
@@ -93,7 +95,13 @@ if __name__ == "__main__":
             sampled_passages=generated_samples,
             verbose=True,
         )
-        print(sent_scores_prompt)
+
+        # For exception handling
+        if len(sent_scores_prompt) > 1:
+            print(sent_scores_prompt)
+            print("Found exception!! Considering only the first sentence.")
+            sent_scores_prompt = sent_scores_prompt[0]
+
         df.loc[index, "Selfcheck Scores"] = sent_scores_prompt
 
         print("===================================\n")
