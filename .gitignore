@@ -1,3 +1,4 @@
 .env
 .idea
 scripts/out
+__pycache__/
