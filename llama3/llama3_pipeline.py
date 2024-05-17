@@ -1,12 +1,31 @@
+import sys
+
+sys.path.append("/home/mdafifal.mamun/research/LLMhalu/llama3")
+
 import pandas as pd
+import spacy
 import torch
+from dotenv import load_dotenv
+from openai import OpenAI
+from selfcheckgpt.modeling_selfcheck import SelfCheckLLMPrompt
+from selfcheckgpt.modeling_selfcheck_apiprompt import SelfCheckAPIPrompt
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
+
+from llama3 import Llama3
+
+load_dotenv()
+
+nlp = spacy.load("en_core_web_sm")
+client = OpenAI()
 
 # Constants
 INPUT_DATA = "/home/mdafifal.mamun/research/LLMhalu/TruthfulQA.csv"
 OUTPUT_DATA = "/home/mdafifal.mamun/research/LLMhalu/llama3/data/llama3_outputs.csv"
 MODEL_ID = "meta-llama/Meta-Llama-3-8B-Instruct"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+selfcheck_prompt = SelfCheckLLMPrompt(MODEL_ID, device)
 
 META_SYNONYM_GENERATION_PROMPT = """
 Generate 5 synonyms of the answer based on the context of the question and return a numbered list to me. 
@@ -45,51 +64,20 @@ For the sentence, you should check whether it is correct truth or not. Answer YE
 NOT SURE, answer NOT SURE. Don't return anything else except YES, NO, or NOT SURE.
 """
 
-# Initializing Llama3 pipeline
-print("Preparing Llama3 pipeline...")
-tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-model = AutoModelForCausalLM.from_pretrained(
-    MODEL_ID,
-    torch_dtype=torch.bfloat16,
-    device_map="auto",
-)
-max_new_tokens = 512
 
 def extract_numbered_list(text):
-    return [line.strip() for line in text.split("\n") if line.strip().startswith(tuple(str(i) + "." for i in range(10)))]
-
-def get_llm_response(system_prompt, question):
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": question},
+    return [
+        line.strip()
+        for line in text.split("\n")
+        if line.strip().startswith(tuple(str(i) + "." for i in range(10)))
     ]
 
-    input_ids = tokenizer.apply_chat_template(
-        messages,
-        add_generation_prompt=True,
-        max_length=model.config.max_position_embeddings - max_new_tokens,
-        truncation=True,
-        return_tensors="pt"
-    ).to(model.device)
 
-    terminators = [
-        tokenizer.eos_token_id,
-        tokenizer.convert_tokens_to_ids("<|eot_id|>")
-    ]
+# Initializing Llama3 pipeline
+print("Preparing Llama3 pipeline...")
+llama3_model = Llama3(MODEL_ID)
 
-    outputs = model.generate(
-        input_ids,
-        max_new_tokens=max_new_tokens,
-        eos_token_id=terminators,
-        do_sample=True,
-        temperature=0.5,
-        top_p=0.9,
-    )
-    response = outputs[0][input_ids.shape[-1]:]
-    
-    return tokenizer.decode(response, skip_special_tokens=True)
-
-if __name__ == "__main__":    
+if __name__ == "__main__":
     df = pd.read_csv(INPUT_DATA)
 
     print("Generating Responses...")
@@ -98,21 +86,56 @@ if __name__ == "__main__":
         print(f"Question: {question}")
 
         # Generate base response
-        system_prompt = ("For the question, please answer in 1 sentence including the question context, if possible. "
-                        "Do not include yes or no at the beginning of the sentence.")
-        base_response = get_llm_response(question=question, system_prompt=system_prompt)
+        system_prompt = (
+            "For the question, please answer in 1 sentence including the question context, if possible. "
+            "Do not include yes or no at the beginning of the sentence."
+        )
+        base_response = llama3_model.invoke(
+            system_prompt=system_prompt, question=question
+        )
+
+        sentences = [sent.text.strip() for sent in nlp(base_response).sents]
+
+        # Generate samples for selfcheck
+        generated_samples = []
+        for i in range(10):
+            base_response = llama3_model.invoke(
+                system_prompt=system_prompt, question=question
+            )
+            generated_samples.append(base_response)
+
+        sent_scores_prompt = selfcheck_prompt.predict(
+            sentences=sentences,
+            sampled_passages=generated_samples,
+            verbose=True,
+        )
 
         # Generate synonyms and synonym responses
         qa_pair = f"Question: {question} Answer: {base_response}"
-        synonyms = extract_numbered_list(get_llm_response(question=qa_pair, system_prompt=META_SYNONYM_GENERATION_PROMPT))
-        syn_responses = [get_llm_response(system_prompt=FACT_VERIFICATION_PROMPT, question=syn) for syn in synonyms]
+        synonyms = extract_numbered_list(
+            llama3_model.invoke(
+                system_prompt=META_SYNONYM_GENERATION_PROMPT, question=qa_pair
+            )
+        )
+        syn_responses = [
+            llama3_model.invoke(system_prompt=FACT_VERIFICATION_PROMPT, question=syn)
+            for syn in synonyms
+        ]
 
         # Generate antonyms and antonym responses
-        antonyms = extract_numbered_list(get_llm_response(question=qa_pair, system_prompt=META_ANTONYM_GENERATION_PROMPT))
-        ant_responses = [get_llm_response(system_prompt=FACT_VERIFICATION_PROMPT, question=ant) for ant in antonyms]
+        antonyms = extract_numbered_list(
+            llama3_model.invoke(
+                system_prompt=META_ANTONYM_GENERATION_PROMPT, question=qa_pair
+            )
+        )
+        ant_responses = [
+            llama3_model.invoke(system_prompt=FACT_VERIFICATION_PROMPT, question=ant)
+            for ant in antonyms
+        ]
 
         # Print responses
         print(f"Response: {base_response}")
+        print(f"Generated samples: {generated_samples}")
         print(f"Synonyms:\n{synonyms}")
         print(f"Synonym Responses:\n{syn_responses}")
         print(f"Antonyms:\n{antonyms}")
@@ -122,8 +145,11 @@ if __name__ == "__main__":
         df.loc[index, "base_response"] = base_response
         df.loc[index, "synonyms"] = ";".join(synonyms)
         df.loc[index, "synonym_responses"] = ";".join(syn_responses)
+        df.loc[index, "generated_samples"] = ";".join(generated_samples)
         df.loc[index, "antonyms"] = ";".join(antonyms)
         df.loc[index, "antonym_responses"] = ";".join(ant_responses)
+        df.loc[index, "generated_samples"] = ";".join(generated_samples)
+        df.loc[index, "Selfcheck Scores"] = sent_scores_prompt
 
         print("===================================\n")
 
