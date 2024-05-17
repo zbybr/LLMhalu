@@ -16,8 +16,8 @@ load_dotenv()
 nlp = spacy.load("en_core_web_sm")
 
 # Constants
-INPUT_DATA = "/home/mdafifal.mamun/research/LLMhalu/TruthfulQA.csv"
-OUTPUT_DATA = "/home/mdafifal.mamun/research/LLMhalu/llama3/data/llama3_outputs.csv"
+INPUT_DATA = "/home/mdafifal.mamun/research/LLMhalu/TruthfulQA1.1.csv"
+OUTPUT_DATA = "/home/mdafifal.mamun/research/LLMhalu/llama3/data/llama3_outputs_truthfulqa1.1.csv"
 MODEL_ID = "meta-llama/Meta-Llama-3-8B-Instruct"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -98,6 +98,7 @@ if __name__ == "__main__":
             base_response = llama3_model.invoke(
                 system_prompt=system_prompt, question=question
             )
+            print(f"Sample {i}: {base_response}")
             generated_samples.append(base_response)
 
         sent_scores_prompt = selfcheck_prompt.predict(
@@ -105,6 +106,12 @@ if __name__ == "__main__":
             sampled_passages=generated_samples,
             verbose=True,
         )
+
+        # For exception handling
+        if len(sent_scores_prompt) > 1:
+            print("Selfcheck score: ", sent_scores_prompt)
+            print("Found exception!! Considering only the first sentence.")
+            sent_scores_prompt = sent_scores_prompt[0]
 
         # Generate synonyms and synonym responses
         qa_pair = f"Question: {question} Answer: {base_response}"
@@ -145,7 +152,7 @@ if __name__ == "__main__":
         df.loc[index, "antonyms"] = ";".join(antonyms)
         df.loc[index, "antonym_responses"] = ";".join(ant_responses)
         df.loc[index, "generated_samples"] = ";".join(generated_samples)
-        df.loc[index, "Selfcheck Scores"] = sent_scores_prompt
+        df.loc[index, "selfcheck_score"] = sent_scores_prompt
 
         print("===================================\n")
 
