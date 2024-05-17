@@ -6,18 +6,14 @@ import pandas as pd
 import spacy
 import torch
 from dotenv import load_dotenv
-from openai import OpenAI
 from selfcheckgpt.modeling_selfcheck import SelfCheckLLMPrompt
-from selfcheckgpt.modeling_selfcheck_apiprompt import SelfCheckAPIPrompt
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from llama3 import Llama3
 
 load_dotenv()
 
 nlp = spacy.load("en_core_web_sm")
-client = OpenAI()
 
 # Constants
 INPUT_DATA = "/home/mdafifal.mamun/research/LLMhalu/TruthfulQA.csv"
