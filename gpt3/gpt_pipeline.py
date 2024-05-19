@@ -81,7 +81,7 @@ def get_gpt_response(prompt, question):
 
 
 if __name__ == "__main__":
-    df = pd.read_csv(INPUT_DATA)[:5]
+    df = pd.read_csv(INPUT_DATA)
 
     print("Generating Responses...")
     for index, row in tqdm(df.iterrows(), total=len(df), desc="Processing issue"):
