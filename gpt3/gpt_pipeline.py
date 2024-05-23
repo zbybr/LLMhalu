@@ -1,3 +1,6 @@
+import argparse
+from pathlib import Path
+
 import pandas as pd
 import spacy
 from dotenv import load_dotenv
@@ -9,14 +12,24 @@ load_dotenv()
 
 nlp = spacy.load("en_core_web_sm")
 
+parser = argparse.ArgumentParser(description="GPT pipeline.")
+parser.add_argument("--dataset_path", type=str, help="Dataset path")
+args = parser.parse_args()
+
 # Constants
-INPUT_DATA = "/home/mdafifal.mamun/research/LLMhalu/TruthfulQA1.1.csv"
+dataset_path = args.dataset_path
+dataset_name = str(Path(dataset_path).stem).lower()
+
+INPUT_DATA = dataset_path
 OUTPUT_DATA = (
-    "/home/mdafifal.mamun/research/LLMhalu/gpt3/data/gpt3_outputs_truthfulqa1.1.csv"
+    f"/home/mdafifal.mamun/research/LLMhalu/gpt3/data/gpt3_outputs_{dataset_name}.csv"
 )
 
 # Initializing Llama3 pipeline
 print("Preparing GPT pipeline...")
+print(f"Input dataset: {INPUT_DATA}")
+print(f"Output dataset: {OUTPUT_DATA}")
+
 GPT_MODEL_KEY = "gpt-3.5-turbo"
 
 selfcheck_prompt = SelfCheckAPIPrompt()
