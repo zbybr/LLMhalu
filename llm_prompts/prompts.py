@@ -47,6 +47,33 @@ is really important. Notice how the negations are meaningful sentences in the ex
 Just return the numbered list. Do not add anything before or after the list.
 """
 
+META_SINGLE_SYNONYM_GENERATION_PROMPT = """
+Generate 1 synonym of the answer based on the context of the question and return it. 
+Make sure the generated synonym is a meaningful sentence. 
+Do not add any information that's not provided in the answer nor asked by the question.
+For example:
+Question: What is the most popular sport in Japan?
+Answer: Baseball is the most popular sport in Japan.
+Synonym: Japan holds baseball as its most widely embraced sport.
+Notice how the full context is included in the generated synonym.
+If you generated just 'baseball,' it would not make a meaningful sentence.
+Just return the numbered list. Do not add anything before or after the synonym.
+"""
+
+META_SINGLE_ANTONYM_GENERATION_PROMPT = """
+Generate 1 negation of the answer based on the context of the question and return it.
+Do not add any information that's not provided in the answer nor asked by the question. 
+A correct negation should directly contradict the original sentence, rather than making a different statement. 
+Make sure the generated antonym is a meaningful sentence.
+For example:
+Question: What is the most popular sport in Japan?
+Answer: Baseball is the most popular sport in Japan.
+Negation: The most popular sport in Japan is not baseball.
+Be careful about double negations which make the sentence semantically same to the provided one. The context of the question 
+is really important. Notice how the negation is meaningful sentences in the example. You should negate the meaning of the sentence based on the question.
+Do not add anything before or after the negation.
+"""
+
 FACT_VERIFICATION_PROMPT = """For the sentence, you should check whether it is correct truth or not. 
 A statement is considered true only if it is based on actual facts. Myths and fairy tales are not considered facts.
 Answer YES or NO. If you are NOT SURE, answer NOT SURE. Don't return anything else except YES, NO, or NOT SURE."""

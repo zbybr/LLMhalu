@@ -8,6 +8,12 @@ from openai import OpenAI
 from selfcheckgpt.modeling_selfcheck_apiprompt import SelfCheckAPIPrompt
 from tqdm import tqdm
 
+import sys
+sys.path.append("D:\\Projects\\LLMhalu")
+
+import llm_prompts.prompts as prompts
+
+
 load_dotenv()
 
 nlp = spacy.load("en_core_web_sm")
@@ -22,7 +28,7 @@ dataset_name = str(Path(dataset_path).stem).lower()
 
 INPUT_DATA = dataset_path
 OUTPUT_DATA = (
-    f"/home/mdafifal.mamun/research/LLMhalu/gpt3/data/gpt3_outputs_{dataset_name}.csv"
+    f"gpt3/data/gpt3_outputs_{dataset_name}.csv"
 )
 
 # Initializing Llama3 pipeline
@@ -34,42 +40,11 @@ GPT_MODEL_KEY = "gpt-3.5-turbo"
 
 selfcheck_prompt = SelfCheckAPIPrompt()
 
-META_SYNONYM_GENERATION_PROMPT = """
-Generate 5 synonyms of the answer based on the context of the question and return a numbered list to me. 
-Make sure the generated synonyms are meaningful sentences. 
-Do not add any information that's not provided in the answer nor asked by the question. Just return the list.
-For example:
-Question: What is the most popular sport in Japan?
-Answer: Baseball is the most popular sport in Japan.
-Mutations:
-1. Japan holds baseball as its most widely embraced sport.
-2. The sport with the highest popularity in Japan is baseball.
-3. Baseball reigns as Japan's most favored sport among the populace.
-Notice how the full context is included in each generated synonym.
-If you generated just 'baseball,' it would not make a meaningful sentence.
-Just return the numbered list. Do not add anything before or after the list.
-"""
-
-META_ANTONYM_GENERATION_PROMPT = """
-Generate 5 negations (reversals, antonyms mutations) of the answer based on the context of the question and return a numbered list to me. 
-Make sure the generated antonyms are meaningful sentences. 
-Do not add any information that's not provided in the answer nor asked by the question. Just return the list.
-For example:
-Question: What is the most popular sport in Japan?
-Answer: Baseball is the most popular sport in Japan.
-Mutations:
-1. The most popular sport in Japan is not baseball.
-2. Baseball is not the most popular sport in Japan.
-3. Japan does not consider baseball as the most popular sport.
-Be careful about double negations which make the sentence semantically same to the provided one. The context of the question 
-is really important. Notice how the antonyms are meaningful sentences in the example. You should negate the meaning of the sentence based on the question.
-Just return the numbered list. Do not add anything before or after the list.
-"""
-
-FACT_VERIFICATION_PROMPT = """
-For the sentence, you should check whether it is correct truth or not. Answer YES or NO. If you are 
-NOT SURE, answer NOT SURE. Don't return anything else except YES, NO, or NOT SURE.
-"""
+META_SYNONYM_GENERATION_PROMPT = prompts.META_SYNONYM_GENERATION_PROMPT
+META_ANTONYM_GENERATION_PROMPT = prompts.META_ANTONYM_GENERATION_PROMPT
+META_SINGLE_SYNONYM_GENERATION_PROMPT = prompts.META_SINGLE_SYNONYM_GENERATION_PROMPT
+META_SINGLE_ANTONYM_GENERATION_PROMPT = prompts.META_SINGLE_ANTONYM_GENERATION_PROMPT
+FACT_VERIFICATION_PROMPT = prompts.FACT_VERIFICATION_PROMPT
 
 
 def extract_numbered_list(text):
@@ -80,10 +55,11 @@ def extract_numbered_list(text):
     ]
 
 
-def get_gpt_response(prompt, question):
+def get_gpt_response(prompt, question, temperature=0.0):
     gpt_model = OpenAI()
     response = gpt_model.chat.completions.create(
         model=GPT_MODEL_KEY,
+        temperature=temperature,
         messages=[
             {"role": "system", "content": prompt},
             {"role": "user", "content": question},
@@ -94,7 +70,7 @@ def get_gpt_response(prompt, question):
 
 
 if __name__ == "__main__":
-    df = pd.read_csv(INPUT_DATA)
+    df = pd.read_csv(INPUT_DATA).sample(30, random_state=42)
 
     print("Generating Responses...")
     for index, row in tqdm(df.iterrows(), total=len(df), desc="Processing issue"):
@@ -102,10 +78,7 @@ if __name__ == "__main__":
         print(f"Question: {question}")
 
         # Generate base response
-        system_prompt = (
-            "For the question, please answer in 1 sentence including the question context, if possible. "
-            "Do not include yes or no at the beginning of the sentence."
-        )
+        system_prompt = prompts.SYSTEM_PROMPT
         base_response = get_gpt_response(system_prompt, question)
 
         sentences = [sent.text.strip() for sent in nlp(base_response).sents]
@@ -113,7 +86,7 @@ if __name__ == "__main__":
         # Generate samples for selfcheck
         generated_samples = []
         for i in range(10):
-            base_response = get_gpt_response(system_prompt, question)
+            base_response = get_gpt_response(system_prompt, question, temperature=0.5)
             print(f"Sample {i}: {base_response}")
             generated_samples.append(base_response)
 
@@ -131,18 +104,37 @@ if __name__ == "__main__":
 
         # Generate synonyms and synonym responses
         qa_pair = f"Question: {question} Answer: {base_response}"
-        resp = get_gpt_response(META_SYNONYM_GENERATION_PROMPT, qa_pair)
+        resp = get_gpt_response(META_SYNONYM_GENERATION_PROMPT, qa_pair, temperature=0.5)
         synonyms = extract_numbered_list(resp)
         syn_responses = [
-            get_gpt_response(FACT_VERIFICATION_PROMPT, syn) for syn in synonyms
+            get_gpt_response(FACT_VERIFICATION_PROMPT, syn, temperature=0.0) for syn in synonyms
         ]
 
         # Generate antonyms and antonym responses
-        resp = get_gpt_response(META_ANTONYM_GENERATION_PROMPT, qa_pair)
+        resp = get_gpt_response(META_ANTONYM_GENERATION_PROMPT, qa_pair, temperature=0.5)
         antonyms = extract_numbered_list(resp)
         ant_responses = [
-            get_gpt_response(FACT_VERIFICATION_PROMPT, ant) for ant in antonyms
+            get_gpt_response(FACT_VERIFICATION_PROMPT, ant, temperature=0.0) for ant in antonyms
         ]
+
+        # Generate single synonyms
+        single_synonyms = []
+        single_synonym_responses = []
+        for i in range(5):
+            syn = get_gpt_response(META_SINGLE_SYNONYM_GENERATION_PROMPT, qa_pair, temperature=0.7)
+            resp = get_gpt_response(FACT_VERIFICATION_PROMPT, syn, temperature=0.0)
+            single_synonyms.append(syn)
+            single_synonym_responses.append(resp)
+
+
+        # Generate single antonyms
+        single_antonyms = []
+        single_antonym_responses = []
+        for i in range(5):
+            ant = get_gpt_response(META_SINGLE_ANTONYM_GENERATION_PROMPT, qa_pair, temperature=0.7)
+            resp = get_gpt_response(FACT_VERIFICATION_PROMPT, ant, temperature=0.0)
+            single_antonyms.append(ant)
+            single_antonym_responses.append(resp)
 
         # Print responses
         print(f"Response: {base_response}")
@@ -154,11 +146,15 @@ if __name__ == "__main__":
 
         # Update DataFrame with responses
         df.loc[index, "base_response"] = base_response
+        df.loc[index, "generated_samples"] = ";".join(generated_samples)
         df.loc[index, "synonyms"] = ";".join(synonyms)
         df.loc[index, "synonym_responses"] = ";".join(syn_responses)
-        df.loc[index, "generated_samples"] = ";".join(generated_samples)
+        df.loc[index, "single_synonyms"] = ";".join(single_synonyms)
+        df.loc[index, "single_synonym_responses"] = ";".join(single_synonym_responses)
         df.loc[index, "antonyms"] = ";".join(antonyms)
         df.loc[index, "antonym_responses"] = ";".join(ant_responses)
+        df.loc[index, "single_antonyms"] = ";".join(single_antonyms)
+        df.loc[index, "single_antonym_responses"] = ";".join(single_antonym_responses)
         df.loc[index, "generated_samples"] = ";".join(generated_samples)
         df.loc[index, "selfcheck_score"] = sent_scores_prompt
 
