@@ -1,20 +1,17 @@
 import argparse
 from pathlib import Path
-
 import pandas as pd
 import spacy
 from dotenv import load_dotenv
 from openai import OpenAI
 from selfcheckgpt.modeling_selfcheck_apiprompt import SelfCheckAPIPrompt
 from tqdm import tqdm
-
 import sys
-sys.path.append("D:\\Projects\\LLMhalu")
-
 import llm_prompts.prompts as prompts
 
 
 load_dotenv()
+sys.path.append("D:\\Projects\\LLMhalu")
 
 nlp = spacy.load("en_core_web_sm")
 
