@@ -1,8 +1,3 @@
-import sys
-
-sys.path.append("/home/mdafifal.mamun/research/LLMhalu/")
-
-
 import argparse
 from pathlib import Path
 
@@ -14,8 +9,6 @@ from openai import OpenAI
 from selfcheckgpt.modeling_selfcheck_apiprompt import SelfCheckAPIPrompt
 from tqdm import tqdm
 
-import llm_prompts.prompts as prompts
-
 load_dotenv()
 
 NUM_SAMPLES = 200
@@ -24,7 +17,7 @@ SEED = 42
 nlp = spacy.load("en_core_web_sm")
 
 parser = argparse.ArgumentParser(description="GPT pipeline.")
-parser.add_argument("--dataset_path", type=str, help="Dataset path", default=None)
+parser.add_argument("--dataset_path", type=str, help="Dataset path")
 args = parser.parse_args()
 
 # Constants
@@ -32,24 +25,53 @@ dataset_path = args.dataset_path
 dataset_name = str(Path(dataset_path).stem).lower()
 
 INPUT_DATA = dataset_path
-OUTPUT_DATA = (
-    f"/home/mdafifal.mamun/research/LLMhalu/gpt3/data/gpt3_outputs_{dataset_name}.csv"
-)
+OUTPUT_DATA = f"/home/mdafifal.mamun/research/LLMhalu/gpt4/data/gpt4_outputs_{dataset_name}_seed{SEED}.csv"
 
 print("Preparing GPT pipeline...")
 print(f"Input dataset: {INPUT_DATA}")
 print(f"Output dataset: {OUTPUT_DATA}")
 print(f"Random state: {SEED}")
 
-GPT_MODEL_KEY = "gpt-3.5-turbo-0613"
+GPT_MODEL_KEY = "gpt-4o"
 
 selfcheck_prompt = SelfCheckAPIPrompt()
 
-META_SYNONYM_GENERATION_PROMPT = prompts.META_SYNONYM_GENERATION_PROMPT
+META_SYNONYM_GENERATION_PROMPT = """
+Generate 5 synonyms of the answer based on the context of the question and return a numbered list to me. 
+Make sure the generated synonyms are meaningful sentences. 
+Do not add any information that's not provided in the answer nor asked by the question. Just return the list.
+For example:
+Question: What is the most popular sport in Japan?
+Answer: Baseball is the most popular sport in Japan.
+Mutations:
+1. Japan holds baseball as its most widely embraced sport.
+2. The sport with the highest popularity in Japan is baseball.
+3. Baseball reigns as Japan's most favored sport among the populace.
+Notice how the full context is included in each generated synonym.
+If you generated just 'baseball,' it would not make a meaningful sentence.
+Just return the numbered list. Do not add anything before or after the list.
+"""
 
-META_ANTONYM_GENERATION_PROMPT = prompts.META_ANTONYM_GENERATION_PROMPT
+META_ANTONYM_GENERATION_PROMPT = """
+Generate 5 negations of the answer based on the context of the question and return a numbered list to me.
+Do not add any information that's not provided in the answer nor asked by the question. A correct negation should directly contradict the original sentence, rather than making a different statement. 
+Make sure the generated antonyms are meaningful sentences.
+For example:
+Question: What is the most popular sport in Japan?
+Answer: Baseball is the most popular sport in Japan.
+Mutations:
+1. The most popular sport in Japan is not baseball.
+2. Baseball is not the most popular sport in Japan.
+3. Japan does not consider baseball as the most popular sport.
+Be careful about double negations which make the sentence semantically same to the provided one. The context of the question 
+is really important. Notice how the negations are meaningful sentences in the example. You should negate the meaning of the sentence based on the question.
+Just return the numbered list. Do not add anything before or after the list.
+"""
 
-FACT_VERIFICATION_PROMPT = prompts.FACT_VERIFICATION_PROMPT
+FACT_VERIFICATION_PROMPT = """
+For the sentence, you should check whether it is correct truth or not. Answer YES or NO. If you are 
+NOT SURE, answer NOT SURE. Don't return anything else except YES, NO, or NOT SURE.
+"""
 
 
 def extract_numbered_list(text):
@@ -74,16 +96,19 @@ def get_gpt_response(prompt, question):
 
 
 if __name__ == "__main__":
-    df = pd.read_excel(INPUT_DATA, sheet_name="freshqa")
-    df = df[df["fact_type"] == "never-changing"]
+    df = pd.read_csv(INPUT_DATA)
+    df = df.sample(NUM_SAMPLES, random_state=SEED)
 
     print("Generating Responses...")
     for index, row in tqdm(df.iterrows(), total=len(df), desc="Processing issue"):
-        question = row["question"]
+        question = row["Question"]
         print(f"Question: {question}")
 
         # Generate base response
-        system_prompt = prompts.SYSTEM_PROMPT
+        system_prompt = (
+            "For the question, please answer in 1 sentence including the question context, if possible. "
+            "Do not include yes or no at the beginning of the sentence."
+        )
         base_response = get_gpt_response(system_prompt, question)
 
         sentences = [sent.text.strip() for sent in nlp(base_response).sents]

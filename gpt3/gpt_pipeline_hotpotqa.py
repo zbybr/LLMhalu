@@ -32,7 +32,7 @@ print(f"Input dataset: {INPUT_DATA}")
 print(f"Output dataset: {OUTPUT_DATA}")
 print(f"Random state: {SEED}")
 
-GPT_MODEL_KEY = "gpt-3.5-turbo"
+GPT_MODEL_KEY = "gpt-3.5-turbo-0613"
 
 selfcheck_prompt = SelfCheckAPIPrompt()
 

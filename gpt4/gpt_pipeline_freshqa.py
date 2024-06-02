@@ -33,7 +33,7 @@ dataset_name = str(Path(dataset_path).stem).lower()
 
 INPUT_DATA = dataset_path
 OUTPUT_DATA = (
-    f"/home/mdafifal.mamun/research/LLMhalu/gpt3/data/gpt3_outputs_{dataset_name}.csv"
+    f"/home/mdafifal.mamun/research/LLMhalu/gpt4/data/gpt4_outputs_{dataset_name}.csv"
 )
 
 print("Preparing GPT pipeline...")
@@ -41,7 +41,7 @@ print(f"Input dataset: {INPUT_DATA}")
 print(f"Output dataset: {OUTPUT_DATA}")
 print(f"Random state: {SEED}")
 
-GPT_MODEL_KEY = "gpt-3.5-turbo-0613"
+GPT_MODEL_KEY = "gpt-4o"
 
 selfcheck_prompt = SelfCheckAPIPrompt()
 
