@@ -25,7 +25,7 @@ dataset_name = str(Path(dataset_path).stem).lower()
 
 INPUT_DATA = dataset_path
 OUTPUT_DATA = (
-    f"gpt3/data/gpt3_outputs_{dataset_name}.csv"
+    f"gpt4/data/gpt4_outputs_{dataset_name}.csv"
 )
 
 # Initializing Llama3 pipeline
@@ -33,7 +33,7 @@ print("Preparing GPT pipeline...")
 print(f"Input dataset: {INPUT_DATA}")
 print(f"Output dataset: {OUTPUT_DATA}")
 
-GPT_MODEL_KEY = "gpt-3.5-turbo-0613"
+GPT_MODEL_KEY = "gpt-4o"
 
 selfcheck_prompt = SelfCheckAPIPrompt()
 

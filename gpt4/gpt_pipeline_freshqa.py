@@ -1,22 +1,25 @@
+import sys
 import argparse
 from pathlib import Path
+import numpy as np
 import pandas as pd
 import spacy
 from dotenv import load_dotenv
 from openai import OpenAI
 from selfcheckgpt.modeling_selfcheck_apiprompt import SelfCheckAPIPrompt
 from tqdm import tqdm
-import sys
 import llm_prompts.prompts as prompts
 
-
 load_dotenv()
-sys.path.append("D:\\Projects\\LLMhalu")
+sys.path.append("/home/mdafifal.mamun/research/LLMhalu/")
+
+NUM_SAMPLES = 200
+SEED = 42
 
 nlp = spacy.load("en_core_web_sm")
 
 parser = argparse.ArgumentParser(description="GPT pipeline.")
-parser.add_argument("--dataset_path", type=str, help="Dataset path")
+parser.add_argument("--dataset_path", type=str, help="Dataset path", default=None)
 args = parser.parse_args()
 
 # Constants
@@ -25,17 +28,18 @@ dataset_name = str(Path(dataset_path).stem).lower()
 
 INPUT_DATA = dataset_path
 OUTPUT_DATA = (
-    f"gpt3/data/gpt3_outputs_{dataset_name}.csv"
+    f"/home/mdafifal.mamun/research/LLMhalu/gpt4/data/gpt4_outputs_{dataset_name}.csv"
 )
 
-# Initializing Llama3 pipeline
 print("Preparing GPT pipeline...")
 print(f"Input dataset: {INPUT_DATA}")
 print(f"Output dataset: {OUTPUT_DATA}")
+print(f"Random state: {SEED}")
 
-GPT_MODEL_KEY = "gpt-3.5-turbo-0613"
+GPT_MODEL_KEY = "gpt-4o"
 
 selfcheck_prompt = SelfCheckAPIPrompt()
+
 
 META_SYNONYM_GENERATION_PROMPT = prompts.META_SYNONYM_GENERATION_PROMPT
 META_ANTONYM_GENERATION_PROMPT = prompts.META_ANTONYM_GENERATION_PROMPT
@@ -52,11 +56,10 @@ def extract_numbered_list(text):
     ]
 
 
-def get_gpt_response(prompt, question, temperature=0.0):
+def get_gpt_response(prompt, question):
     gpt_model = OpenAI()
     response = gpt_model.chat.completions.create(
         model=GPT_MODEL_KEY,
-        temperature=temperature,
         messages=[
             {"role": "system", "content": prompt},
             {"role": "user", "content": question},
