@@ -29,7 +29,7 @@ dataset_name = str(Path(dataset_path).stem).lower()
 
 INPUT_DATA = dataset_path
 OUTPUT_DATA = (
-    f"gpt3/data/gpt3_outputs_{dataset_name}_seed{SEED}_xx.csv"
+    f"gpt3/data/gpt3_outputs_{dataset_name}_seed{SEED}.csv"
 )
 
 # Initializing Llama3 pipeline
