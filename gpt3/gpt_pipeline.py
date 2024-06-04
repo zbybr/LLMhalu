@@ -1,4 +1,5 @@
 import argparse
+import time
 from pathlib import Path
 import pandas as pd
 import spacy
@@ -7,13 +8,16 @@ from openai import OpenAI
 from selfcheckgpt.modeling_selfcheck_apiprompt import SelfCheckAPIPrompt
 from tqdm import tqdm
 import sys
+sys.path.append("D:\\Projects\\LLMhalu")
+
 import llm_prompts.prompts as prompts
 
 
 load_dotenv()
-sys.path.append("D:\\Projects\\LLMhalu")
+
 
 nlp = spacy.load("en_core_web_sm")
+SEED = 77
 
 parser = argparse.ArgumentParser(description="GPT pipeline.")
 parser.add_argument("--dataset_path", type=str, help="Dataset path")
@@ -25,7 +29,7 @@ dataset_name = str(Path(dataset_path).stem).lower()
 
 INPUT_DATA = dataset_path
 OUTPUT_DATA = (
-    f"gpt3/data/gpt3_outputs_{dataset_name}.csv"
+    f"gpt3/data/gpt3_outputs_{dataset_name}_seed{SEED}_xx.csv"
 )
 
 # Initializing Llama3 pipeline
@@ -67,7 +71,7 @@ def get_gpt_response(prompt, question, temperature=0.0):
 
 
 if __name__ == "__main__":
-    df = pd.read_csv(INPUT_DATA).sample(30, random_state=42)
+    df = pd.read_csv(INPUT_DATA).sample(1, random_state=SEED)
 
     print("Generating Responses...")
     for index, row in tqdm(df.iterrows(), total=len(df), desc="Processing issue"):
@@ -81,6 +85,7 @@ if __name__ == "__main__":
         sentences = [sent.text.strip() for sent in nlp(base_response).sents]
 
         # Generate samples for selfcheck
+        selfcheck_time = time.time()
         generated_samples = []
         for i in range(10):
             base_response = get_gpt_response(system_prompt, question, temperature=0.5)
@@ -92,6 +97,7 @@ if __name__ == "__main__":
             sampled_passages=generated_samples,
             verbose=True,
         )
+        selfcheck_time = time.time() - selfcheck_time
 
         # For exception handling
         if len(sent_scores_prompt) > 1:
@@ -100,6 +106,7 @@ if __name__ == "__main__":
             sent_scores_prompt = sent_scores_prompt[0]
 
         # Generate synonyms and synonym responses
+        prev_approach_time = time.time()
         qa_pair = f"Question: {question} Answer: {base_response}"
         resp = get_gpt_response(META_SYNONYM_GENERATION_PROMPT, qa_pair, temperature=0.5)
         synonyms = extract_numbered_list(resp)
@@ -113,8 +120,10 @@ if __name__ == "__main__":
         ant_responses = [
             get_gpt_response(FACT_VERIFICATION_PROMPT, ant, temperature=0.0) for ant in antonyms
         ]
+        prev_approach_time = time.time() - prev_approach_time
 
         # Generate single synonyms
+        new_approach_time = time.time()
         single_synonyms = []
         single_synonym_responses = []
         for i in range(5):
@@ -132,6 +141,7 @@ if __name__ == "__main__":
             resp = get_gpt_response(FACT_VERIFICATION_PROMPT, ant, temperature=0.0)
             single_antonyms.append(ant)
             single_antonym_responses.append(resp)
+        new_approach_time = time.time() - new_approach_time
 
         # Print responses
         print(f"Response: {base_response}")
@@ -154,6 +164,9 @@ if __name__ == "__main__":
         df.loc[index, "single_antonym_responses"] = ";".join(single_antonym_responses)
         df.loc[index, "generated_samples"] = ";".join(generated_samples)
         df.loc[index, "selfcheck_score"] = sent_scores_prompt
+        df.loc[index, "selfcheck_time"] = selfcheck_time
+        df.loc[index, "prev_approach_time"] = prev_approach_time
+        df.loc[index, "new_approach_time"] = new_approach_time
 
         print("===================================\n")
 
