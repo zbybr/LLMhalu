@@ -1,6 +1,7 @@
 import pandas as pd
 from dotenv import load_dotenv
 from openai import OpenAI
+from tqdm import tqdm
 
 load_dotenv()
 
@@ -25,9 +26,10 @@ def get_gpt_response(prompt, question, temperature=0.0):
     return response.choices[0].message.content
 
 
-df = pd.read_csv("D:\\Projects\\LLMhalu\\HotpotQA.csv")
+df = pd.read_csv("D:\\Projects\\LLMhalu\\datasets\\HotpotQA.csv")
 
-for _, row in df.sample(5, random_state=122).iterrows():
+for index, row in tqdm(df.iterrows(), total=len(df)):
+    tqdm.write(f"Processing sample {index}/{len(df)}")
     question = row["Questions"]
     answer = row["Answers"]
 
@@ -35,5 +37,9 @@ for _, row in df.sample(5, random_state=122).iterrows():
     print(qa_pair)
 
     response = get_gpt_response(SYSTEM_PROMPT, question=qa_pair, temperature=0.0)
+    df.loc[index, "extended_answer"] = response
+
     print("Response:", response)
     print("\n\n")
+
+df.to_csv("D:\\Projects\\LLMhalu\\datasets\\hotpotqa_extended.csv")
