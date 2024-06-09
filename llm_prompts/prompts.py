@@ -57,7 +57,8 @@ Answer: Baseball is the most popular sport in Japan.
 Synonym: Japan holds baseball as its most widely embraced sport.
 Notice how the full context is included in the generated synonym.
 If you generated just 'baseball,' it would not make a meaningful sentence.
-Just return the numbered list. Do not add anything before or after the synonym.
+Just return the numbered list. Do not add anything before or after the synonym. 
+Do not include any header like "Synonym".
 """
 
 META_SINGLE_ANTONYM_GENERATION_PROMPT = """
@@ -72,6 +73,7 @@ Negation: The most popular sport in Japan is not baseball.
 Be careful about double negations which make the sentence semantically same to the provided one. The context of the question 
 is really important. Notice how the negation is meaningful sentences in the example. You should negate the meaning of the sentence based on the question.
 Do not add anything before or after the negation.
+Do not include any header like "Negation".
 """
 
 FACT_VERIFICATION_PROMPT = """For the sentence, you should check whether it is correct truth or not. 
