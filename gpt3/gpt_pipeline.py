@@ -57,100 +57,118 @@ def run_pipeline(input_path, output_path):
     df = pd.read_csv(input_path)
     print(f"Output dataset: {output_path}")
     print("Generating Responses...")
-    for index, row in tqdm(df.iterrows(), total=len(df), desc="Processing issue"):
-        question = row["Question"]
-        print(f"Question: {question}")
 
-        # Generate base response
-        system_prompt = prompts.SYSTEM_PROMPT
-        base_response = get_gpt_response(system_prompt, question)
+    every_five_response_flag = 0
 
-        sentences = [sent.text.strip() for sent in nlp(base_response).sents]
+    try:
+        for index, row in tqdm(df.iterrows(), total=len(df), desc="Processing issue"):
+            question = row["Question"]
+            print(f"Question: {question}")
+            every_five_response_flag += 1
 
-        # Generate samples for selfcheck
-        selfcheck_time = time.time()
-        generated_samples = []
-        for i in range(10):
-            base_response = get_gpt_response(system_prompt, question, temperature=0.5)
-            print(f"Sample {i}: {base_response}")
-            generated_samples.append(base_response)
+            # Generate base response
+            system_prompt = prompts.SYSTEM_PROMPT
+            base_response = get_gpt_response(system_prompt, question)
 
-        sent_scores_prompt = selfcheck_prompt.predict(
-            sentences=sentences,
-            sampled_passages=generated_samples,
-            verbose=True,
-        )
-        selfcheck_time = time.time() - selfcheck_time
+            sentences = [sent.text.strip() for sent in nlp(base_response).sents]
 
-        # For exception handling
-        if len(sent_scores_prompt) > 1:
-            print("Selfcheck score: ", sent_scores_prompt)
-            print("Found exception!! Considering only the first sentence.")
-            sent_scores_prompt = sent_scores_prompt[0]
+            # Generate samples for selfcheck
+            selfcheck_time = time.time()
+            generated_samples = []
+            for i in range(10):
+                base_response = get_gpt_response(system_prompt, question, temperature=0.5)
+                print(f"Sample {i}: {base_response}")
+                generated_samples.append(base_response)
 
-        # # Generate synonyms and synonym responses
-        # prev_approach_time = time.time()
-        qa_pair = f"Question: {question} Answer: {base_response}"
-        # resp = get_gpt_response(META_SYNONYM_GENERATION_PROMPT, qa_pair, temperature=0.5)
-        # synonyms = extract_numbered_list(resp)
-        # syn_responses = [
-        #     get_gpt_response(FACT_VERIFICATION_PROMPT, syn, temperature=0.0) for syn in synonyms
-        # ]
-        #
-        # # Generate antonyms and antonym responses
-        # resp = get_gpt_response(META_ANTONYM_GENERATION_PROMPT, qa_pair, temperature=0.5)
-        # antonyms = extract_numbered_list(resp)
-        # ant_responses = [
-        #     get_gpt_response(FACT_VERIFICATION_PROMPT, ant, temperature=0.0) for ant in antonyms
-        # ]
-        # prev_approach_time = time.time() - prev_approach_time
+            sent_scores_prompt = selfcheck_prompt.predict(
+                sentences=sentences,
+                sampled_passages=generated_samples,
+                verbose=True,
+            )
+            selfcheck_time = time.time() - selfcheck_time
 
-        # Generate single synonyms
-        new_approach_time = time.time()
-        single_synonyms = []
-        single_synonym_responses = []
-        for i in range(5):
-            syn = get_gpt_response(META_SINGLE_SYNONYM_GENERATION_PROMPT, qa_pair, temperature=0.7)
-            resp = get_gpt_response(FACT_VERIFICATION_PROMPT, syn, temperature=0.0)
-            single_synonyms.append(syn)
-            single_synonym_responses.append(resp)
+            # For exception handling
+            if len(sent_scores_prompt) > 1:
+                print("Selfcheck score: ", sent_scores_prompt)
+                print("Found exception!! Considering only the first sentence.")
+                sent_scores_prompt = sent_scores_prompt[0]
 
-        # Generate single antonyms
-        single_antonyms = []
-        single_antonym_responses = []
-        for i in range(5):
-            ant = get_gpt_response(META_SINGLE_ANTONYM_GENERATION_PROMPT, qa_pair, temperature=0.7)
-            resp = get_gpt_response(FACT_VERIFICATION_PROMPT, ant, temperature=0.0)
-            single_antonyms.append(ant)
-            single_antonym_responses.append(resp)
-        new_approach_time = time.time() - new_approach_time
+            # # Generate synonyms and synonym responses
+            # prev_approach_time = time.time()
+            qa_pair = f"Question: {question} Answer: {base_response}"
+            # resp = get_gpt_response(META_SYNONYM_GENERATION_PROMPT, qa_pair, temperature=0.5)
+            # synonyms = extract_numbered_list(resp)
+            # syn_responses = [
+            #     get_gpt_response(FACT_VERIFICATION_PROMPT, syn, temperature=0.0) for syn in synonyms
+            # ]
+            #
+            # # Generate antonyms and antonym responses
+            # resp = get_gpt_response(META_ANTONYM_GENERATION_PROMPT, qa_pair, temperature=0.5)
+            # antonyms = extract_numbered_list(resp)
+            # ant_responses = [
+            #     get_gpt_response(FACT_VERIFICATION_PROMPT, ant, temperature=0.0) for ant in antonyms
+            # ]
+            # prev_approach_time = time.time() - prev_approach_time
 
-        # Print responses
-        print(f"Response: {base_response}")
-        print(f"Generated samples: {generated_samples}")
-        print(f"Single Synonyms:\n{single_synonyms}")
-        print(f"Synonym Responses:\n{single_synonym_responses}")
-        print(f"Single Antonyms:\n{single_antonyms}")
-        print(f"Antonym Responses:\n{single_antonym_responses}")
+            # Generate single synonyms
+            new_approach_time = time.time()
+            single_synonyms = []
+            single_synonym_responses = []
+            for i in range(5):
+                syn = get_gpt_response(META_SINGLE_SYNONYM_GENERATION_PROMPT, qa_pair, temperature=0.7)
+                resp = get_gpt_response(FACT_VERIFICATION_PROMPT, syn, temperature=0.0)
+                single_synonyms.append(syn)
+                single_synonym_responses.append(resp)
 
-        # Update DataFrame with responses
-        df.loc[index, "base_response"] = base_response
-        df.loc[index, "generated_samples"] = ";".join(generated_samples)
-        # df.loc[index, "synonyms"] = ";".join(synonyms)
-        # df.loc[index, "synonym_responses"] = ";".join(syn_responses)
-        df.loc[index, "single_synonyms"] = ";".join(single_synonyms)
-        df.loc[index, "single_synonym_responses"] = ";".join(single_synonym_responses)
-        # df.loc[index, "antonyms"] = ";".join(antonyms)
-        # df.loc[index, "antonym_responses"] = ";".join(ant_responses)
-        df.loc[index, "single_antonyms"] = ";".join(single_antonyms)
-        df.loc[index, "single_antonym_responses"] = ";".join(single_antonym_responses)
-        df.loc[index, "generated_samples"] = ";".join(generated_samples)
-        df.loc[index, "selfcheck_score"] = sent_scores_prompt
-        df.loc[index, "selfcheck_time"] = selfcheck_time
-        # df.loc[index, "prev_approach_time"] = prev_approach_time
-        df.loc[index, "new_approach_time"] = new_approach_time
+            # Generate single antonyms
+            single_antonyms = []
+            single_antonym_responses = []
+            for i in range(5):
+                ant = get_gpt_response(META_SINGLE_ANTONYM_GENERATION_PROMPT, qa_pair, temperature=0.7)
+                resp = get_gpt_response(FACT_VERIFICATION_PROMPT, ant, temperature=0.0)
+                single_antonyms.append(ant)
+                single_antonym_responses.append(resp)
+            new_approach_time = time.time() - new_approach_time
 
-        print("===================================\n")
+            # Print responses
+            print(f"Response: {base_response}")
+            print(f"Generated samples: {generated_samples}")
+            print(f"Single Synonyms:\n{single_synonyms}")
+            print(f"Synonym Responses:\n{single_synonym_responses}")
+            print(f"Single Antonyms:\n{single_antonyms}")
+            print(f"Antonym Responses:\n{single_antonym_responses}")
+
+            # Update DataFrame with responses
+            df.loc[index, "base_response"] = base_response
+            df.loc[index, "generated_samples"] = ";".join(generated_samples)
+            # df.loc[index, "synonyms"] = ";".join(synonyms)
+            # df.loc[index, "synonym_responses"] = ";".join(syn_responses)
+            df.loc[index, "single_synonyms"] = ";".join(single_synonyms)
+            df.loc[index, "single_synonym_responses"] = ";".join(single_synonym_responses)
+            # df.loc[index, "antonyms"] = ";".join(antonyms)
+            # df.loc[index, "antonym_responses"] = ";".join(ant_responses)
+            df.loc[index, "single_antonyms"] = ";".join(single_antonyms)
+            df.loc[index, "single_antonym_responses"] = ";".join(single_antonym_responses)
+            df.loc[index, "generated_samples"] = ";".join(generated_samples)
+            df.loc[index, "selfcheck_score"] = sent_scores_prompt
+            df.loc[index, "selfcheck_time"] = selfcheck_time
+            # df.loc[index, "prev_approach_time"] = prev_approach_time
+            df.loc[index, "new_approach_time"] = new_approach_time
+
+            print("===================================\n")
+
+            if every_five_response_flag >= 5:
+                every_five_response_flag = 0
+                df.to_csv(output_path)
+                print(f"Output saved at index {index}.")
+
+    except Exception as e:
+        print(e)
+        print("Error occurred. Saving output...")
+
+        df.to_csv(output_path)
+        print("Output saved.")
+
     # Save output data
     df.to_csv(output_path)
     print("Output saved.")
@@ -165,9 +183,8 @@ if __name__ == "__main__":
     dataset_path = args.dataset_path
     dataset_name = str(Path(dataset_path).stem).lower()
 
-    for i in range(1, 4):
-        output_path = (
-            f"gpt3/final_responses/truthfulqa/gpt3_outputs_{dataset_name}_run{i}.csv"
-        )
+    output_path = (
+        f"gpt3/final_responses/truthfulqa/gpt3_outputs_{dataset_name}_run1.csv"
+    )
 
-        run_pipeline(dataset_path, output_path)
+    run_pipeline(dataset_path, output_path)
