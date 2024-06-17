@@ -76,6 +76,5 @@ Do not add anything before or after the negation.
 Do not include any header like "Negation".
 """
 
-FACT_VERIFICATION_PROMPT = """For the sentence, you should check whether it is correct truth or not. 
-A statement is considered true only if it is based on actual facts. Myths and fairy tales are not considered facts.
+FACT_VERIFICATION_PROMPT = """For the sentence, you should check whether it is correct ground truth or not. 
 Answer YES or NO. If you are NOT SURE, answer NOT SURE. Don't return anything else except YES, NO, or NOT SURE."""
