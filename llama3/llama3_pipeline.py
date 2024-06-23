@@ -148,6 +148,9 @@ def run_pipeline(df, output_path):
 
         print("===================================\n")
 
+        df.to_csv(output_path)
+        print(f"Output saved at index {index}.")
+
     # Save output data
     df.to_csv(output_path)
     print("Output saved.")
