@@ -139,9 +139,9 @@ if __name__ == "__main__":
     SAMPLES = 5
     TOTAL_RUNS = 1
 
-    df = pd.read_csv(INPUT_DATA).sample(SAMPLES, random_state=SEED)
+    df = pd.read_csv(INPUT_DATA)  # .sample(SAMPLES, random_state=SEED)
 
     for i in range(TOTAL_RUNS):
         print(f"Run: {i+1}/{TOTAL_RUNS}")
-        OUTPUT_DATA = f"/home/mdafifal.mamun/research/LLMhalu/llama3/data/final_responses/truthfulqaq.3_temp0.1.csv"
+        OUTPUT_DATA = "/home/mdafifal.mamun/research/LLMhalu/mistral/data/truthfulqa1.3_temp0.1.csv"
         run_pipeline(df, OUTPUT_DATA)
