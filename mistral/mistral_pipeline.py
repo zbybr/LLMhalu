@@ -18,7 +18,7 @@ nlp = spacy.load("en_core_web_sm")
 
 # Constants
 INPUT_DATA = "/home/mdafifal.mamun/research/LLMhalu/TruthfulQA1.3.csv"
-MODEL_ID = "mistralai/Mistral-7B-v0.3"
+MODEL_ID = "mistralai/Mistral-7B-Instruct-v0.3"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 print(f"Using device: {device}")
@@ -42,7 +42,7 @@ def extract_numbered_list(text):
 
 # Initializing Mistral pipeline
 print("Preparing Mistral pipeline...")
-mistral_model = Mistral(MODEL_ID)
+mistral_model = Mistral(MODEL_ID, temperature=0.1)
 # mistral_model = mistral_model.cuda()
 
 
@@ -88,6 +88,7 @@ def run_pipeline(df, output_path):
                 system_prompt=META_SYNONYM_GENERATION_PROMPT, question=qa_pair
             )
         )
+
         syn_responses = [
             mistral_model.invoke(system_prompt=FACT_VERIFICATION_PROMPT, question=syn)
             for syn in synonyms
@@ -103,30 +104,6 @@ def run_pipeline(df, output_path):
             mistral_model.invoke(system_prompt=FACT_VERIFICATION_PROMPT, question=ant)
             for ant in antonyms
         ]
-
-        # # Generate single synonyms
-        # single_synonyms = []
-        # single_synonym_responses = []
-        # for i in range(5):
-        #     syn = llama3_model.invoke(
-        #         META_SINGLE_SYNONYM_GENERATION_PROMPT, qa_pair, temperature=0.7
-        #     )
-        #     resp = llama3_model.invoke(FACT_VERIFICATION_PROMPT, syn, temperature=0.1)
-        #     print(f"Generated Single Synonym {i + 1}: {syn}, Response: {resp}")
-        #     single_synonyms.append(syn)
-        #     single_synonym_responses.append(resp)
-
-        # # Generate single antonyms
-        # single_antonyms = []
-        # single_antonym_responses = []
-        # for i in range(5):
-        #     ant = llama3_model.invoke(
-        #         META_SINGLE_ANTONYM_GENERATION_PROMPT, qa_pair, temperature=0.7
-        #     )
-        #     resp = llama3_model.invoke(FACT_VERIFICATION_PROMPT, ant, temperature=0.1)
-        #     print(f"Generated Single Antonym {i + 1}: {ant}, Response: {resp}")
-        #     single_antonyms.append(ant)
-        #     single_antonym_responses.append(resp)
 
         # Print responses
         print(f"Response: {base_response}")
@@ -159,12 +136,12 @@ def run_pipeline(df, output_path):
 
 if __name__ == "__main__":
     SEED = 42
-    SAMPLES = 1
+    SAMPLES = 5
     TOTAL_RUNS = 1
 
     df = pd.read_csv(INPUT_DATA).sample(SAMPLES, random_state=SEED)
 
     for i in range(TOTAL_RUNS):
         print(f"Run: {i+1}/{TOTAL_RUNS}")
-        OUTPUT_DATA = f"/home/mdafifal.mamun/research/LLMhalu/llama3/data/final_responses/truthfulqa/gg.csv"
+        OUTPUT_DATA = f"/home/mdafifal.mamun/research/LLMhalu/llama3/data/final_responses/truthfulqaq.3_temp0.1.csv"
         run_pipeline(df, OUTPUT_DATA)
