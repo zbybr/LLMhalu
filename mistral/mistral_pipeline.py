@@ -11,6 +11,7 @@ from tqdm import tqdm
 
 import llm_prompts.prompts as prompts
 from mistral import Mistral
+from util.util import clean_response
 
 load_dotenv()
 
@@ -43,7 +44,6 @@ def extract_numbered_list(text):
 # Initializing Mistral pipeline
 print("Preparing Mistral pipeline...")
 mistral_model = Mistral(MODEL_ID, temperature=0.1)
-# mistral_model = mistral_model.cuda()
 
 
 def run_pipeline(df, output_path):
@@ -90,7 +90,11 @@ def run_pipeline(df, output_path):
         )
 
         syn_responses = [
-            mistral_model.invoke(system_prompt=FACT_VERIFICATION_PROMPT, question=syn)
+            clean_response(
+                mistral_model.invoke(
+                    system_prompt=FACT_VERIFICATION_PROMPT, question=syn
+                )
+            )
             for syn in synonyms
         ]
 
@@ -101,7 +105,11 @@ def run_pipeline(df, output_path):
             )
         )
         ant_responses = [
-            mistral_model.invoke(system_prompt=FACT_VERIFICATION_PROMPT, question=ant)
+            clean_response(
+                mistral_model.invoke(
+                    system_prompt=FACT_VERIFICATION_PROMPT, question=ant
+                )
+            )
             for ant in antonyms
         ]
 
@@ -143,5 +151,5 @@ if __name__ == "__main__":
 
     for i in range(TOTAL_RUNS):
         print(f"Run: {i+1}/{TOTAL_RUNS}")
-        OUTPUT_DATA = "/home/mdafifal.mamun/research/LLMhalu/mistral/data/truthfulqa1.3_temp0.1.csv"
+        OUTPUT_DATA = "/home/mdafifal.mamun/research/LLMhalu/mistral/data/mistral_truthfulqa1.3_temp0.1.csv"
         run_pipeline(df, OUTPUT_DATA)
