@@ -1,11 +1,13 @@
 def clean_response(response):
-    if "YES" in response:
-        return "YES"
+    response = response.strip()
 
-    elif "NO" in response:
+    if response.startswith("NOT SURE"):
+        return "NOT SURE"
+
+    elif response.startswith("NO"):
         return "NO"
 
-    elif "NOT SURE" in response:
-        return "NOT SURE"
+    elif response.startswith("YES"):
+        return "YES"
 
     return response
