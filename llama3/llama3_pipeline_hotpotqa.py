@@ -23,7 +23,7 @@ args = parser.parse_args()
 temperature = args.temp
 
 # Constants
-INPUT_DATA = "/home/mdafifal.mamun/research/LLMhalu/TruthfulQA1.3.csv"
+INPUT_DATA = "/home/mdafifal.mamun/research/LLMhalu/datasets/hotpotqa_extended.csv"
 MODEL_ID = "meta-llama/Meta-Llama-3-8B-Instruct"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -54,7 +54,7 @@ llama3_model = Llama3(MODEL_ID)
 def run_pipeline(df, output_path):
     print("Generating Responses...")
     for index, row in tqdm(df.iterrows(), total=len(df), desc="Processing issue"):
-        question = row["Question"]
+        question = row["Questions"]
         print(f"Question: {question}")
 
         # Generate base response
@@ -143,9 +143,9 @@ if __name__ == "__main__":
     SAMPLES = 100
     TOTAL_RUNS = 1
 
-    df = pd.read_csv(INPUT_DATA).sample(SAMPLES, random_state=SEED)
+    df = pd.read_csv(INPUT_DATA)  # .sample(SAMPLES, random_state=SEED)
 
     for i in range(TOTAL_RUNS):
         print(f"Run: {i+1}/{TOTAL_RUNS}")
-        OUTPUT_DATA = f"/home/mdafifal.mamun/research/LLMhalu/llama3/data/temperature/llama3_truthfulqa_seed{SEED}_{SAMPLES}samples_temp{temperature}.csv"
+        OUTPUT_DATA = f"/home/mdafifal.mamun/research/LLMhalu/llama3/data/llama3_hotpotqa_temp{temperature}.csv"
         run_pipeline(df, OUTPUT_DATA)

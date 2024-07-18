@@ -12,7 +12,7 @@ class Llama3:
         )
         self.max_new_tokens = max_new_tokens
 
-    def invoke(self, system_prompt, question):
+    def invoke(self, system_prompt, question, temperature=0.5):
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": question},
@@ -36,7 +36,7 @@ class Llama3:
             max_new_tokens=self.max_new_tokens,
             eos_token_id=terminators,
             do_sample=True,
-            temperature=0.5,
+            temperature=temperature,
         )
         response = outputs[0][input_ids.shape[-1] :]
 
