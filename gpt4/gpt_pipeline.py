@@ -7,11 +7,12 @@ from openai import OpenAI
 from selfcheckgpt.modeling_selfcheck_apiprompt import SelfCheckAPIPrompt
 from tqdm import tqdm
 import sys
+sys.path.append("/Users/afif/Work/projects/LLMhalu")
+
 import llm_prompts.prompts as prompts
 
 
 load_dotenv()
-sys.path.append("D:\\Projects\\LLMhalu")
 
 nlp = spacy.load("en_core_web_sm")
 
@@ -35,7 +36,7 @@ print(f"Output dataset: {OUTPUT_DATA}")
 
 GPT_MODEL_KEY = "gpt-4o"
 
-selfcheck_prompt = SelfCheckAPIPrompt()
+selfcheck_prompt = SelfCheckAPIPrompt(model=GPT_MODEL_KEY)
 
 META_SYNONYM_GENERATION_PROMPT = prompts.META_SYNONYM_GENERATION_PROMPT
 META_ANTONYM_GENERATION_PROMPT = prompts.META_ANTONYM_GENERATION_PROMPT
@@ -67,7 +68,7 @@ def get_gpt_response(prompt, question, temperature=0.0):
 
 
 if __name__ == "__main__":
-    df = pd.read_csv(INPUT_DATA).sample(30, random_state=42)
+    df = pd.read_csv(INPUT_DATA).sample(2, random_state=42)
 
     print("Generating Responses...")
     for index, row in tqdm(df.iterrows(), total=len(df), desc="Processing issue"):
@@ -114,25 +115,6 @@ if __name__ == "__main__":
             get_gpt_response(FACT_VERIFICATION_PROMPT, ant, temperature=0.0) for ant in antonyms
         ]
 
-        # Generate single synonyms
-        single_synonyms = []
-        single_synonym_responses = []
-        for i in range(5):
-            syn = get_gpt_response(META_SINGLE_SYNONYM_GENERATION_PROMPT, qa_pair, temperature=0.7)
-            resp = get_gpt_response(FACT_VERIFICATION_PROMPT, syn, temperature=0.0)
-            single_synonyms.append(syn)
-            single_synonym_responses.append(resp)
-
-
-        # Generate single antonyms
-        single_antonyms = []
-        single_antonym_responses = []
-        for i in range(5):
-            ant = get_gpt_response(META_SINGLE_ANTONYM_GENERATION_PROMPT, qa_pair, temperature=0.7)
-            resp = get_gpt_response(FACT_VERIFICATION_PROMPT, ant, temperature=0.0)
-            single_antonyms.append(ant)
-            single_antonym_responses.append(resp)
-
         # Print responses
         print(f"Response: {base_response}")
         print(f"Generated samples: {generated_samples}")
@@ -146,12 +128,8 @@ if __name__ == "__main__":
         df.loc[index, "generated_samples"] = ";".join(generated_samples)
         df.loc[index, "synonyms"] = ";".join(synonyms)
         df.loc[index, "synonym_responses"] = ";".join(syn_responses)
-        df.loc[index, "single_synonyms"] = ";".join(single_synonyms)
-        df.loc[index, "single_synonym_responses"] = ";".join(single_synonym_responses)
         df.loc[index, "antonyms"] = ";".join(antonyms)
         df.loc[index, "antonym_responses"] = ";".join(ant_responses)
-        df.loc[index, "single_antonyms"] = ";".join(single_antonyms)
-        df.loc[index, "single_antonym_responses"] = ";".join(single_antonym_responses)
         df.loc[index, "generated_samples"] = ";".join(generated_samples)
         df.loc[index, "selfcheck_score"] = sent_scores_prompt
 

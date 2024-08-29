@@ -1,4 +1,3 @@
-import argparse
 import sys
 
 sys.path.append("/home/mdafifal.mamun/research/LLMhalu")
@@ -11,20 +10,16 @@ from selfcheckgpt.modeling_selfcheck import SelfCheckLLMPrompt
 from tqdm import tqdm
 
 import llm_prompts.prompts as prompts
-from llama3 import Llama3
+from mistral import Mistral
+from util.util import clean_response
 
 load_dotenv()
 
 nlp = spacy.load("en_core_web_sm")
-parser = argparse.ArgumentParser(description="Training script arguments")
-parser.add_argument("--temp", type=float, required=True, help="Temperature")
-args = parser.parse_args()
-
-temperature = args.temp
 
 # Constants
 INPUT_DATA = "/home/mdafifal.mamun/research/LLMhalu/TruthfulQA1.3.csv"
-MODEL_ID = "meta-llama/Meta-Llama-3-8B-Instruct"
+MODEL_ID = "mistralai/Mistral-7B-Instruct-v0.3"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 print(f"Using device: {device}")
@@ -46,9 +41,9 @@ def extract_numbered_list(text):
     ]
 
 
-# Initializing Llama3 pipeline
-print("Preparing Llama3 pipeline...")
-llama3_model = Llama3(MODEL_ID)
+# Initializing Mistral pipeline
+print("Preparing Mistral pipeline...")
+mistral_model = Mistral(MODEL_ID, temperature=0.1)
 
 
 def run_pipeline(df, output_path):
@@ -59,8 +54,8 @@ def run_pipeline(df, output_path):
 
         # Generate base response
         system_prompt = prompts.SYSTEM_PROMPT
-        base_response = llama3_model.invoke(
-            system_prompt=system_prompt, question=question, temperature=temperature
+        base_response = mistral_model.invoke(
+            system_prompt=system_prompt, question=question
         )
 
         # sentences = [sent.text.strip() for sent in nlp(base_response).sents]
@@ -89,33 +84,42 @@ def run_pipeline(df, output_path):
         # Generate synonyms and synonym responses
         qa_pair = f"Question: {question} Answer: {base_response}"
         synonyms = extract_numbered_list(
-            llama3_model.invoke(
-                system_prompt=META_SYNONYM_GENERATION_PROMPT,
-                question=qa_pair,
-                temperature=temperature,
+            mistral_model.invoke(
+                system_prompt=META_SYNONYM_GENERATION_PROMPT, question=qa_pair
             )
         )
+
         syn_responses = [
-            llama3_model.invoke(
-                system_prompt=FACT_VERIFICATION_PROMPT, question=syn, temperature=0.1
+            clean_response(
+                mistral_model.invoke(
+                    system_prompt=FACT_VERIFICATION_PROMPT, question=syn
+                )
             )
             for syn in synonyms
         ]
 
         # Generate antonyms and antonym responses
         antonyms = extract_numbered_list(
-            llama3_model.invoke(
-                system_prompt=META_ANTONYM_GENERATION_PROMPT,
-                question=qa_pair,
-                temperature=temperature,
+            mistral_model.invoke(
+                system_prompt=META_ANTONYM_GENERATION_PROMPT, question=qa_pair
             )
         )
         ant_responses = [
-            llama3_model.invoke(
-                system_prompt=FACT_VERIFICATION_PROMPT, question=ant, temperature=0.1
+            clean_response(
+                mistral_model.invoke(
+                    system_prompt=FACT_VERIFICATION_PROMPT, question=ant
+                )
             )
             for ant in antonyms
         ]
+
+        # Print responses
+        print(f"Response: {base_response}")
+        # print(f"Generated samples: {generated_samples}")
+        print(f"Synonyms:\n{synonyms}")
+        print(f"Synonym Responses:\n{syn_responses}")
+        print(f"Antonyms:\n{antonyms}")
+        print(f"Antonym Responses:\n{ant_responses}")
 
         # Update DataFrame with responses
         df.loc[index, "base_response"] = base_response
@@ -140,12 +144,12 @@ def run_pipeline(df, output_path):
 
 if __name__ == "__main__":
     SEED = 42
-    SAMPLES = 100
+    SAMPLES = 5
     TOTAL_RUNS = 1
 
-    df = pd.read_csv(INPUT_DATA).sample(SAMPLES, random_state=SEED)
+    df = pd.read_csv(INPUT_DATA)  # .sample(SAMPLES, random_state=SEED)
 
     for i in range(TOTAL_RUNS):
         print(f"Run: {i+1}/{TOTAL_RUNS}")
-        OUTPUT_DATA = f"/home/mdafifal.mamun/research/LLMhalu/llama3/data/temperature/llama3_truthfulqa_seed{SEED}_{SAMPLES}samples_temp{temperature}.csv"
+        OUTPUT_DATA = "/home/mdafifal.mamun/research/LLMhalu/mistral/data/mistral_truthfulqa1.3_temp0.1.csv"
         run_pipeline(df, OUTPUT_DATA)
