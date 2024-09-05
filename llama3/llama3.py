@@ -12,7 +12,9 @@ class Llama3:
         )
         self.max_new_tokens = max_new_tokens
 
-    def invoke(self, system_prompt, question, temperature=0.5):
+    def invoke(
+        self, system_prompt, question, temperature=0.5, return_token_usage=False
+    ):
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": question},
@@ -39,5 +41,20 @@ class Llama3:
             temperature=temperature,
         )
         response = outputs[0][input_ids.shape[-1] :]
+
+        if return_token_usage:
+            prompt_tokens = len(input_ids[0])
+            completion_tokens = len(outputs[0]) - prompt_tokens
+
+            token_usage = {
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": prompt_tokens + completion_tokens,
+            }
+
+            return (
+                self.tokenizer.decode(response, skip_special_tokens=True),
+                token_usage,
+            )
 
         return self.tokenizer.decode(response, skip_special_tokens=True)
