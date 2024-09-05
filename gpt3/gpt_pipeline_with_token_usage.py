@@ -12,7 +12,7 @@ import sys
 sys.path.append("D:\\Projects\\LLMhalu")
 
 import llm_prompts.prompts as prompts
-from util import token_counter
+# from util import token_counter
 
 
 load_dotenv()
@@ -20,7 +20,7 @@ load_dotenv()
 nlp = spacy.load("en_core_web_sm")
 
 parser = argparse.ArgumentParser(description="GPT pipeline.")
-parser.add_argument("--dataset_path", default="D:\\Projects\\LLMhalu\\TruthfulQA1.2.csv", type=str, help="Dataset path")
+parser.add_argument("--dataset_path", default="D:\\Projects\\LLMhalu\\TruthfulQA1.3.csv", type=str, help="Dataset path")
 args = parser.parse_args()
 
 # Constants
@@ -30,7 +30,7 @@ SEED = 77
 
 INPUT_DATA = dataset_path
 OUTPUT_DATA = (
-    f"data/gpt3_outputs_{dataset_name}_token_usage_seed{SEED}.csv"
+    f"D:\\Projects\\LLMhalu\\gpt3\\data\\gpt3_outputs_{dataset_name}_token_usage.csv"
 )
 
 # Initializing Llama3 pipeline
@@ -57,6 +57,7 @@ def extract_numbered_list(text):
     ]
 
 
+# TODO This function need to be integrated to selfcheck api library for token usage comparison
 def add_token_usage(base_usage, new_usage):
     for key in new_usage:
         if key in base_usage:
@@ -86,7 +87,7 @@ def get_gpt_response(prompt, question, temperature=0.0):
 
 
 if __name__ == "__main__":
-    df = pd.read_csv(INPUT_DATA).sample(10, random_state=SEED)
+    df = pd.read_csv(INPUT_DATA).sample(100, random_state=SEED)
 
     print("Generating Responses...")
     for index, row in tqdm(df.iterrows(), total=len(df), desc="Processing issue"):
@@ -115,11 +116,14 @@ if __name__ == "__main__":
             generated_samples.append(base_response)
             selfchkgpt_token_usage = add_token_usage(selfchkgpt_token_usage, token_usage)
 
-        sent_scores_prompt = selfcheck_prompt.predict(
+        sent_scores_prompt, token_usage = selfcheck_prompt.predict(
             sentences=sentences,
             sampled_passages=generated_samples,
             verbose=True,
         )
+        # print(token_usage)
+
+        selfchkgpt_token_usage = add_token_usage(selfchkgpt_token_usage, token_usage)
 
         # For exception handling
         if len(sent_scores_prompt) > 1:
@@ -158,33 +162,6 @@ if __name__ == "__main__":
             previous_syno_anto_usage = add_token_usage(previous_syno_anto_usage, token_usage)
             ant_responses.append(ant_resp)
 
-        # Generate single synonyms
-        single_synonyms = []
-        single_synonym_responses = []
-        current_syno_anto_usage = {
-            "prompt_tokens": 0,
-            "completion_tokens": 0,
-            "total_tokens": 0,
-        }
-        for i in range(5):
-            syn, token_usage = get_gpt_response(META_SINGLE_SYNONYM_GENERATION_PROMPT, qa_pair, temperature=0.7)
-            current_syno_anto_usage = add_token_usage(current_syno_anto_usage, token_usage)
-            resp, token_usage = get_gpt_response(FACT_VERIFICATION_PROMPT, syn, temperature=0.0)
-            current_syno_anto_usage = add_token_usage(current_syno_anto_usage, token_usage)
-            single_synonyms.append(syn)
-            single_synonym_responses.append(resp)
-
-
-        # Generate single antonyms
-        single_antonyms = []
-        single_antonym_responses = []
-        for i in range(5):
-            ant, token_usage = get_gpt_response(META_SINGLE_ANTONYM_GENERATION_PROMPT, qa_pair, temperature=0.7)
-            current_syno_anto_usage = add_token_usage(current_syno_anto_usage, token_usage)
-            resp, token_usage = get_gpt_response(FACT_VERIFICATION_PROMPT, ant, temperature=0.0)
-            current_syno_anto_usage = add_token_usage(current_syno_anto_usage, token_usage)
-            single_antonyms.append(ant)
-            single_antonym_responses.append(resp)
 
         # Print responses
         print(f"Response: {base_response}")
@@ -199,20 +176,16 @@ if __name__ == "__main__":
         df.loc[index, "generated_samples"] = ";".join(generated_samples)
         df.loc[index, "synonyms"] = ";".join(synonyms)
         df.loc[index, "synonym_responses"] = ";".join(syn_responses)
-        df.loc[index, "single_synonyms"] = ";".join(single_synonyms)
-        df.loc[index, "single_synonym_responses"] = ";".join(single_synonym_responses)
         df.loc[index, "antonyms"] = ";".join(antonyms)
         df.loc[index, "antonym_responses"] = ";".join(ant_responses)
-        df.loc[index, "single_antonyms"] = ";".join(single_antonyms)
-        df.loc[index, "single_antonym_responses"] = ";".join(single_antonym_responses)
         df.loc[index, "generated_samples"] = ";".join(generated_samples)
         df.loc[index, "selfcheck_score"] = sent_scores_prompt
         df.loc[index, "base_token_usage"] = str(base_token_usage)
         df.loc[index, "selfcheck_token_usage"] = str(selfchkgpt_token_usage)
-        df.loc[index, "previous_synant_token_usage"] = str(previous_syno_anto_usage)
-        df.loc[index, "current_synant_token_usage"] = str(current_syno_anto_usage)
+        df.loc[index, "metaqa_token_usage"] = str(previous_syno_anto_usage)
 
         print("===================================\n")
+        df.to_csv(OUTPUT_DATA)
 
     # Save output data
     df.to_csv(OUTPUT_DATA)
