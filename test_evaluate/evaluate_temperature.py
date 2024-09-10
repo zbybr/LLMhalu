@@ -1,0 +1,283 @@
+import math
+import os
+
+import matplotlib.pyplot as plt
+import pandas as pd
+
+dataset_path1 = "output/gpt3_outputs_truthfulqa1.3_100samples_seed42_temp0.1.csv"
+dataset_path2 = "output/gpt3_outputs_truthfulqa1.3_100samples_seed42_temp0.3.csv"
+dataset_path3 = "output/gpt3_outputs_truthfulqa1.3_100samples_seed42_temp0.5.csv"
+dataset_path4 = "output/gpt3_outputs_truthfulqa1.3_100samples_seed42_temp0.7.csv"
+eval_dir = "evaluation_metric/final/overall"
+df1 = pd.read_csv(dataset_path1, encoding="latin-1")
+df2 = pd.read_csv(dataset_path2, encoding="latin-1")
+df3 = pd.read_csv(dataset_path3, encoding="latin-1")
+df4 = pd.read_csv(dataset_path4, encoding="latin-1")
+
+
+def get_metric_score(score, threshold, ground_truth):
+    ground_truth = ground_truth.strip().lower()
+    label = "yes" if score >= threshold else "no"
+
+    tp = 1 if ground_truth == "yes" and label == "yes" else 0
+    fp = 1 if ground_truth == "no" and label == "yes" else 0
+    tn = 1 if ground_truth == "no" and label == "no" else 0
+    fn = 1 if ground_truth == "yes" and label == "no" else 0
+
+    return tp, fp, tn, fn
+
+
+def calculate_mt_hallucination_score(row):
+    score = 0.0
+
+    weights = {"yes": 0.1, "no": 0.1, "not sure": 0.05}
+
+    synonym_responses = row["synonym_responses"].split(";")
+
+    for syn in synonym_responses:
+        syn_l = syn.lower()
+        if syn_l == "no":
+            score += weights[syn_l]
+        elif syn_l == "not sure":
+            score += weights[syn_l]
+
+    antonym_responses = row["antonym_responses"].split(";")
+
+    for ant in antonym_responses:
+        ant_l = ant.lower()
+        if ant_l == "yes":
+            score += weights[ant_l]
+        elif ant_l == "not sure":
+            score += weights[ant_l]
+
+    return score
+
+
+def calculate_metrics(data):
+    TP = sum(row[0] for row in data)
+    FP = sum(row[1] for row in data)
+    TN = sum(row[2] for row in data)
+    FN = sum(row[3] for row in data)
+
+    precision = TP / (TP + FP) if TP + FP != 0 else 0
+    recall = TP / (TP + FN) if TP + FN != 0 else 0
+    f1_score = (
+        2 * (precision * recall) / (precision + recall)
+        if precision + recall != 0
+        else 0
+    )
+
+    return precision, recall, f1_score
+
+
+thresholds = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]  # Thresholds from 0 to 1 with step 0.01
+
+precision1 = []
+recall1 = []
+f1_score1 = []
+precision2 = []
+recall2 = []
+f1_score2 = []
+precision3 = []
+recall3 = []
+f1_score3 = []
+precision4 = []
+recall4 = []
+f1_score4 = []
+mean_precision = []
+mean_recall = []
+mean_f1 = []
+variance_r = []
+variance_p = []
+variance_f = []
+
+for threshold in thresholds:
+    print(f"Threshold: {threshold}")
+    sum_precision = 0.0
+    sum_recall = 0.0
+    sum_f1 = 0.0
+    scores1 = []
+    for index, row in df1.iterrows():
+        score = calculate_mt_hallucination_score(row)
+        print("MT Score:", score)
+
+        halu = row["hallucination_check"]  # Replace this key with ground truths
+
+        row_score = get_metric_score(score, threshold, halu)
+
+        scores1.append(row_score)
+
+    precision_1, recall_1, f1_score_1 = calculate_metrics(scores1)
+    print(f"Our Score\nPrecision: {precision_1}, Recall: {recall_1}, F1: {f1_score_1}")
+    precision1.append(precision_1)
+    recall1.append(recall_1)
+    f1_score1.append(f1_score_1)
+    sum_precision += precision_1
+    sum_recall += recall_1
+    sum_f1 += f1_score_1
+
+    scores2 = []
+    for index, row in df2.iterrows():
+        score = calculate_mt_hallucination_score(row)
+        print("MT Score:", score)
+
+        halu = row["hallucination_check"]  # Replace this key with ground truths
+
+        row_score = get_metric_score(score, threshold, halu)
+
+        scores2.append(row_score)
+
+    precision_2, recall_2, f1_score_2 = calculate_metrics(scores2)
+    print(f"Our Score\nPrecision: {precision_2}, Recall: {recall_2}, F1: {f1_score_2}")
+    precision2.append(precision_2)
+    recall2.append(recall_2)
+    f1_score2.append(f1_score_2)
+    sum_precision += precision_2
+    sum_recall += recall_2
+    sum_f1 += f1_score_2
+
+    scores3 = []
+    for index, row in df3.iterrows():
+        score = calculate_mt_hallucination_score(row)
+        print("MT Score:", score)
+
+        halu = row["hallucination_check"]  # Replace this key with ground truths
+
+        row_score = get_metric_score(score, threshold, halu)
+
+        scores3.append(row_score)
+
+    precision_3, recall_3, f1_score_3 = calculate_metrics(scores3)
+    print(f"Our Score\nPrecision: {precision_3}, Recall: {recall_3}, F1: {f1_score_3}")
+    precision3.append(precision_3)
+    recall3.append(recall_3)
+    f1_score3.append(f1_score_3)
+    sum_precision += precision_3
+    sum_recall += recall_3
+    sum_f1 += f1_score_3
+
+    scores4 = []
+    for index, row in df4.iterrows():
+        score = calculate_mt_hallucination_score(row)
+        print("MT Score:", score)
+
+        halu = row["hallucination_check"]  # Replace this key with ground truths
+
+        row_score = get_metric_score(score, threshold, halu)
+
+        scores4.append(row_score)
+
+    precision_4, recall_4, f1_score_4 = calculate_metrics(scores3)
+    print(f"Our Score\nPrecision: {precision_4}, Recall: {recall_4}, F1: {f1_score_4}")
+    precision4.append(precision_4)
+    recall4.append(recall_4)
+    f1_score4.append(f1_score_4)
+    sum_precision += precision_4
+    sum_recall += recall_4
+    sum_f1 += f1_score_4
+
+    mean_precision_t = sum_precision / 4.0
+    mean_precision.append(mean_precision_t)
+    mean_recall_t = sum_recall / 4.0
+    mean_recall.append(mean_recall_t)
+    mean_f1_t = sum_f1 / 4.0
+    mean_f1.append(mean_f1_t)
+
+    variance = ((mean_precision_t - precision_1)**2 + (mean_precision_t - precision_2)**2 + (mean_precision_t - precision_3)**2 + (mean_precision_t - precision_4)**2 ) / 4.0
+    variance_p.append(variance)
+    variance = ((mean_recall_t - recall_1) ** 2 + (mean_recall_t - recall_2) ** 2 +
+                (mean_recall_t - recall_3) ** 2 + (mean_recall_t - recall_4) ** 2) / 4.0
+    variance_r.append(variance)
+    variance = ((mean_f1_t - f1_score_1) ** 2 + (mean_f1_t - f1_score_2) ** 2 +
+                (mean_f1_t - f1_score_3) ** 2 + (mean_f1_t - f1_score_4) ** 2) / 4.0
+    variance_f.append(variance)
+
+
+# Ensure the plot directory exists
+os.makedirs(eval_dir, exist_ok=True)
+
+fig = plt.figure(figsize=(16, 6))
+
+ax1 = fig.add_subplot(1, 2, 2)
+ax1.spines['right'].set_visible(False)
+ax1.spines['top'].set_visible(False)
+ax1.plot(thresholds, f1_score1, label="T = 0.1", color="purple", marker='*')
+ax1.plot(thresholds, f1_score2, label="T = 0.3", color="red", marker='^')
+ax1.plot(thresholds, f1_score3, label="T = 0.5", color="yellow", marker='o')
+ax1.plot(thresholds, f1_score4, label="T = 0.7", color="green", marker='.')
+ax1.set_xlabel("Threshold", fontsize=16)
+ax1.set_ylabel("F1 Score", fontsize=16)
+ax1.set_title("F1 Score Curve", fontsize=16)
+
+ax2 = fig.add_subplot(1, 2, 1)
+ax2.spines['right'].set_visible(False)
+ax2.spines['top'].set_visible(False)
+ax2.plot(thresholds, precision1, label="T = 0.1", color="purple", marker='*')
+ax2.plot(thresholds, precision2, label="T = 0.3", color="red", marker='^')
+ax2.plot(thresholds, precision3, label="T = 0.5", color="yellow", marker='o')
+ax2.plot(thresholds, precision4, label="T = 0.7", color="green", marker='.')
+ax2.set_xlabel("Threshold", fontsize=16)
+ax2.set_ylabel("Precision", fontsize=16)
+ax2.set_title("Precision Curve", fontsize=16)
+ax2.legend(bbox_to_anchor=(1, -0.15), ncol=4, loc='upper center', borderaxespad=0)
+
+fig.savefig(os.path.join(eval_dir, "temperature.pdf"), dpi=300, bbox_inches='tight', pad_inches=0)
+plt.close()
+# # Plot Recall for thresholds
+# plt.plot(thresholds, recall1, label="T = 0.1")
+# plt.plot(thresholds, recall2, label="T = 0.3")
+# plt.plot(thresholds, recall3, label="T = 0.5")
+# plt.plot(thresholds, recall4, label="T = 0.7")
+# plt.xlabel("Threshold")
+# plt.ylabel("Recall")
+# plt.title("Recall Curve")
+# plt.legend()
+# plt.grid(True)
+# plt.savefig(os.path.join(eval_dir, "recall_curve.png"), dpi=300)
+# plt.close()
+
+# # Plot Recall for thresholds
+# plt.plot(thresholds, mean_precision, label="Mean Precision")
+# plt.plot(thresholds, mean_recall, label="Mean Recall")
+# plt.plot(thresholds, mean_f1, label="Mean F1")
+# plt.xlabel("Threshold")
+# plt.ylabel("Value")
+# plt.title("Mean Curve")
+# plt.legend()
+# plt.grid(True)
+# plt.savefig(os.path.join(eval_dir, "mean.png"))
+# plt.close()
+#
+# # Plot Recall for thresholds
+# plt.plot(thresholds, variance_p, label="Precision Variance")
+# plt.plot(thresholds, variance_r, label="Recall Variance")
+# plt.plot(thresholds, variance_f, label="F1 Variance")
+# plt.xlabel("Threshold")
+# plt.ylabel("Value")
+# plt.title("Deviation Curve")
+# plt.legend()
+# plt.grid(True)
+# plt.savefig(os.path.join(eval_dir, "deviation.png"))
+# plt.close()
+
+# # Save outputs
+# output_df = pd.DataFrame(
+#     {
+#         "Threshold": thresholds,
+#         "Precision1": precision1,
+#         "Recall1": recall1,
+#         "F11": f1_score1,
+#         "Precision2": precision2,
+#         "Recall2": recall2,
+#         "F12": f1_score2,
+#         "Precision3": precision3,
+#         "Recall3": recall3,
+#         "F13": f1_score3,
+#         "Precision4": precision4,
+#         "Recall4": recall4,
+#         "F14": f1_score4,
+#     }
+# )
+#
+# output_df.to_csv(os.path.join(eval_dir, "comparison.csv"), index=False)
+
