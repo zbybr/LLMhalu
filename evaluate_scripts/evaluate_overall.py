@@ -7,7 +7,7 @@ dataset_path = "gpt4_outputs_overall.csv"
 dataset_path1 = "gpt3_outputs_overall.csv"
 dataset_path2 = "llama3_outputs_overall.csv"
 dataset_path3 = "mistral_outputs_overall.csv"
-eval_dir = ""
+# eval_dir = ""
 df = pd.read_csv(dataset_path, encoding="latin-1")
 df1 = pd.read_csv(dataset_path1, encoding="latin-1")
 df2 = pd.read_csv(dataset_path2, encoding="latin-1")
@@ -209,8 +209,8 @@ for threshold in thresholds:
     selfcheck_recall3.append(recall)
     selfcheck_f1_score3.append(f1_score)
 
-# Ensure the plot directory exists
-os.makedirs(eval_dir, exist_ok=True)
+# # Ensure the plot directory exists
+# os.makedirs(eval_dir, exist_ok=True)
 
 fig = plt.figure(figsize=(24, 6))
 
@@ -266,6 +266,6 @@ ax2.set_title("Recall Curve on Multiple Models", fontsize=16)
 ax2.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=4, borderaxespad=0)
 ax2.grid(False)
 
-fig.savefig(os.path.join(eval_dir, "multimodel.pdf"), dpi=300, bbox_inches='tight', pad_inches=0)
+fig.savefig("multimodel.pdf", dpi=300, bbox_inches='tight', pad_inches=0)
 
 
